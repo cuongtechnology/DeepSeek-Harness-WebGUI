@@ -7,7 +7,6 @@ import type {
   RuntimeInfo,
 } from '@deepseek-harness/agent-sdk';
 import type { AgentEvent, AgentStatus } from '@deepseek-harness/shared';
-import { createId } from '@deepseek-harness/shared';
 import { loadHarnessConfig, type HarnessConfig } from './config';
 import { isCommandAvailable } from './availability';
 import { installHarness, INSTALL_METHODS } from './installer';
@@ -152,7 +151,9 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
     if (sr.ended) {
       throw new Error(`Agent session has ended: ${sessionId}`);
     }
-    this.emit(sr, { type: 'message', id: createId('msg'), role: 'user', content: message, timestamp: now() });
+    // The runtime echoes the submitted message back as a `user/message` event,
+    // which normalize() turns into the canonical `message` event. We don't emit
+    // one here, otherwise the transcript shows the user's message twice.
     await sr.runtime.client.prompt(sessionId, [textBlock(message)]);
   }
 
