@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { API_WS_URL } from '@/lib/config';
 import { Spinner } from '@deepseek-harness/ui';
 import { Folder, FileText, FileCode2, Search, FilePlus2, FolderPlus, ArrowUp, Trash2 } from 'lucide-react';
 
@@ -36,6 +38,7 @@ export function FileExplorer({
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState<'file' | 'dir' | null>(null);
   const [newName, setNewName] = useState('');
+  const dirRef = useRef('');
 
   const load = useCallback(
     async (path: string) => {
@@ -44,6 +47,7 @@ export function FileExplorer({
         const data = await apiGet<Entry[]>(`/projects/${projectId}/files?path=${encodeURIComponent(path)}`);
         setEntries(data);
         setDir(path);
+        dirRef.current = path;
       } catch {
         setEntries([]);
       } finally {
@@ -56,6 +60,19 @@ export function FileExplorer({
   useEffect(() => {
     void load('');
   }, [load]);
+
+  // Refresh the current directory in real time when files change on disk
+  // (agent edits, terminal commands, etc.).
+  useEffect(() => {
+    const socket = io(`${API_WS_URL}/files`, { withCredentials: true, transports: ['websocket', 'polling'] });
+    socket.on('connect', () => socket.emit('files:subscribe', { projectId }));
+    socket.on('files:changed', (payload: { projectId: string }) => {
+      if (payload.projectId === projectId) void load(dirRef.current);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [projectId, load]);
 
   async function submitCreate() {
     const name = newName.trim();
