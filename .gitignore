@@ -38,6 +38,7 @@ Thumbs.db
 # Workspace runtime data (local projects/workspaces)
 .workspaces/
 data/
+.sessions/
 
 # Secrets
 *.pem
