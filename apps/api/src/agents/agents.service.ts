@@ -19,7 +19,6 @@ import { PrismaService } from '../common/prisma.service';
 import { AuditService } from '../common/audit.service';
 import { PermissionsService } from '../common/permissions.service';
 import { RuntimeConfigService, type RuntimeConfig, type RuntimeConfigUpdate } from '../common/runtime-config.service';
-import { projectWorkspace } from '../common/workspace';
 import { CreateSessionDto } from './dto/agent.dto';
 import type {
   AgentEvent as AgentEventRecord,
@@ -118,7 +117,10 @@ export class AgentsService implements OnModuleInit, OnModuleDestroy {
     const adapterId = dto.adapterId ?? this.registry.list()[0]?.id;
     if (!adapterId) throw new BadRequestException('No agent runtimes are available');
     const adapter = this.registry.get(adapterId);
-    const workspacePath = projectWorkspace(project.id);
+    // Use the project's stored workspace path (single source of truth, shared
+    // with files/git/terminal). Recomputing from WORKSPACES_ROOT here would
+    // diverge if the root env changed after the project was created.
+    const workspacePath = project.workspacePath;
 
     const sessionId = `session-${randomUUID().replaceAll('-', '')}`;
 

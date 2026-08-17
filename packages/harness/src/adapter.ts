@@ -248,7 +248,7 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
 
   /** Environment for the runtime: inherits the host env plus per-workspace DSH_* overrides. */
   private runtimeEnv(workspacePath: string): NodeJS.ProcessEnv {
-    return {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       DSH_CWD: workspacePath,
       DSH_MODEL: this.config.model,
@@ -256,6 +256,13 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
       ...(this.config.apiKey ? { DEEPSEEK_API_KEY: this.config.apiKey } : {}),
       ...(this.config.baseUrl ? { DEEPSEEK_BASE_URL: this.config.baseUrl } : {}),
     };
+    // Bare `DSH_X=` lines in .env become empty strings once passed through, and
+    // empty strings defeat the runtime's `DSH_X ?? default` fallbacks (e.g. the
+    // session store falls back to '' instead of './.sessions'). Drop them.
+    for (const key of Object.keys(env)) {
+      if (key.startsWith('DSH_') && !env[key]) delete env[key];
+    }
+    return env;
   }
 
   private async consume(sr: SessionRuntime): Promise<void> {

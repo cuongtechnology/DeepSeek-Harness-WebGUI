@@ -39,6 +39,8 @@ Thumbs.db
 .workspaces/
 data/
 .sessions/
+# Harness runtime session store (sanitized workspace dirs under the API cwd)
+apps/api/--*/
 
 # Secrets
 *.pem
