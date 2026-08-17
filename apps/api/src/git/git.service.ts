@@ -40,6 +40,10 @@ export class GitApiService {
     return this.svc(ownerId, projectId).then(({ git }) => git.diff(path, staged));
   }
 
+  diffPair(ownerId: string, projectId: string, path: string, staged = false) {
+    return this.svc(ownerId, projectId).then(({ git }) => git.diffPair(path, staged));
+  }
+
   log(ownerId: string, projectId: string, count = 50) {
     return this.svc(ownerId, projectId).then(({ git }) => git.log(count));
   }

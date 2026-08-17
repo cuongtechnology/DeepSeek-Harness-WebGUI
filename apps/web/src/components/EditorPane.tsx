@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { apiGet } from '@/lib/api';
+import { languageFor } from '@/lib/language';
 import { Spinner } from '@deepseek-harness/ui';
 import { FileCode2, X } from 'lucide-react';
 
@@ -146,15 +147,4 @@ export function EditorPane({
       </div>
     </div>
   );
-}
-
-function languageFor(path: string): string {
-  const ext = path.split('.').pop() ?? '';
-  const map: Record<string, string> = {
-    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
-    json: 'json', md: 'markdown', css: 'css', html: 'html', py: 'python',
-    go: 'go', rs: 'rust', sh: 'shell', bash: 'shell', yml: 'yaml', yaml: 'yaml',
-    prisma: 'prisma', sql: 'sql', toml: 'ini', env: 'ini', dockerfile: 'dockerfile',
-  };
-  return map[ext] ?? 'plaintext';
 }

@@ -23,6 +23,11 @@ export class FilesController {
     return this.files.list(user.sub, projectId, path);
   }
 
+  @Get('tree')
+  tree(@CurrentUser() user: JwtPayload, @Param('projectId') projectId: string) {
+    return this.files.tree(user.sub, projectId);
+  }
+
   @Get('read')
   read(@CurrentUser() user: JwtPayload, @Param('projectId') projectId: string, @Query('path') path: string) {
     return this.files.read(user.sub, projectId, path);

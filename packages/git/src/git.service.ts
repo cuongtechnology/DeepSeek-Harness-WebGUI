@@ -1,4 +1,6 @@
 import simpleGit, { type SimpleGit } from 'simple-git';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { GitError } from '@deepseek-harness/shared';
 
 export interface GitStatusFile {
@@ -19,6 +21,14 @@ export interface GitStatusResult {
 export interface GitDiffResult {
   path: string;
   diff: string;
+}
+
+export interface GitDiffPair {
+  path: string;
+  original: string;
+  modified: string;
+  binary: boolean;
+  kind: 'added' | 'deleted' | 'modified';
 }
 
 export interface GitLogEntry {
@@ -75,6 +85,51 @@ export class GitService {
     const raw = await this.git.diff(args);
     if (!raw) return [];
     return [{ path: path ?? '', diff: raw }];
+  }
+
+  /**
+   * Resolve both sides of a file's diff (before / after) so the frontend can
+   * render it in a real diff editor instead of parsing the unified text.
+   *
+   * `staged` selects the diff baseline exactly like `git diff --cached` vs
+   * `git diff`: HEAD→index for staged, index→worktree for unstaged. New and
+   * deleted files are reconstructed with an empty side; untracked files
+   * (no index/HEAD entry) surface as an empty original + full worktree text.
+   */
+  async diffPair(path: string, staged = false): Promise<GitDiffPair | null> {
+    if (!(await this.isRepo())) return null;
+
+    const blob = async (spec: string): Promise<string | null> => {
+      try {
+        return await this.git.show([`${spec}:${path}`]);
+      } catch {
+        return null;
+      }
+    };
+
+    let original: string;
+    let modified: string;
+    let kind: GitDiffPair['kind'] = 'modified';
+
+    if (staged) {
+      const head = await blob('HEAD');
+      const index = await blob('');
+      if (head === null && index !== null) kind = 'added';
+      else if (index === null && head !== null) kind = 'deleted';
+      original = head ?? '';
+      modified = index ?? '';
+    } else {
+      const index = await blob('');
+      const head = await blob('HEAD');
+      const worktree = await readFile(join(this.workspacePath, path), 'utf8').catch(() => null);
+      if (index === null && worktree !== null) kind = 'added';
+      else if (worktree === null && index !== null) kind = 'deleted';
+      original = index ?? head ?? '';
+      modified = worktree ?? '';
+    }
+
+    const hasNullByte = (s: string) => s.indexOf('\0') !== -1;
+    return { path, original, modified, binary: hasNullByte(original) || hasNullByte(modified), kind };
   }
 
   async show(path: string): Promise<string> {

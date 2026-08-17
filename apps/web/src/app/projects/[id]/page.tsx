@@ -2,15 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { FileExplorer } from '@/components/FileExplorer';
 import { EditorPane } from '@/components/EditorPane';
 import { AgentPanel } from '@/components/AgentPanel';
 import { GitPanel } from '@/components/GitPanel';
+import { Palette, type PaletteItem } from '@/components/Palette';
 import { apiGet, apiPost } from '@/lib/api';
 import { Button } from '@deepseek-harness/ui';
-import { ChevronLeft, Bot, TerminalSquare, GitBranch } from 'lucide-react';
+import {
+  ChevronLeft,
+  Bot,
+  TerminalSquare,
+  GitBranch,
+  FolderOpen,
+  FileSearch,
+  LayoutDashboard,
+  Search,
+  FileCode2,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const TerminalPanel = dynamic(() => import('@/components/TerminalPanel').then((m) => m.TerminalPanel), { ssr: false });
@@ -33,14 +44,25 @@ interface Project {
   description: string | null;
 }
 
+interface TreeEntry {
+  path: string;
+  name: string;
+  type: 'file' | 'directory';
+  size?: number;
+}
+
 export default function ProjectPage() {
   const { id: projectId } = useParams<{ id: string }>();
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [files, setFiles] = useState<string[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [terminalId, setTerminalId] = useState<string | null>(null);
   const [bottomTab, setBottomTab] = useState<'terminal' | 'git'>('git');
+  const [paletteMode, setPaletteMode] = useState<'commands' | 'files' | null>(null);
+  const [quickFiles, setQuickFiles] = useState<TreeEntry[]>([]);
+  const [quickLoading, setQuickLoading] = useState(false);
 
   const explorer = useResize(240);
   const agent = useResize(360);
@@ -49,6 +71,31 @@ export default function ProjectPage() {
   useEffect(() => {
     apiGet<Project>(`/projects/${projectId}`).then(setProject).catch(() => undefined);
   }, [projectId]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteMode((m) => (m === 'commands' ? null : 'commands'));
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setPaletteMode((m) => (m === 'files' ? null : 'files'));
+      } else if (e.key === 'Escape') {
+        setPaletteMode(null);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (paletteMode !== 'files') return;
+    setQuickLoading(true);
+    apiGet<TreeEntry[]>(`/projects/${projectId}/files/tree`)
+      .then(setQuickFiles)
+      .catch(() => setQuickFiles([]))
+      .finally(() => setQuickLoading(false));
+  }, [paletteMode, projectId]);
 
   function openFile(path: string) {
     setFiles((prev) => (prev.includes(path) ? prev : [...prev, path]));
@@ -75,6 +122,24 @@ export default function ProjectPage() {
     setBottomTab('terminal');
   }
 
+  const commandItems: PaletteItem[] = [
+    { id: 'agent', label: 'Start agent session', icon: <Bot className="h-4 w-4" />, onSelect: () => void startAgent() },
+    { id: 'terminal', label: 'New terminal', icon: <TerminalSquare className="h-4 w-4" />, onSelect: () => void newTerminal() },
+    { id: 'show-git', label: 'Show Git panel', icon: <GitBranch className="h-4 w-4" />, onSelect: () => setBottomTab('git') },
+    { id: 'show-terminal', label: 'Show Terminal panel', icon: <TerminalSquare className="h-4 w-4" />, onSelect: () => setBottomTab('terminal') },
+    { id: 'quick-open', label: 'Open file…', icon: <FileSearch className="h-4 w-4" />, sublabel: 'Ctrl+P', onSelect: () => setPaletteMode('files') },
+    { id: 'projects', label: 'Back to projects', icon: <FolderOpen className="h-4 w-4" />, onSelect: () => router.push('/projects') },
+    { id: 'dashboard', label: 'Go to dashboard', icon: <LayoutDashboard className="h-4 w-4" />, onSelect: () => router.push('/dashboard') },
+  ];
+
+  const quickItems: PaletteItem[] = quickFiles.map((f) => ({
+    id: f.path,
+    label: f.name,
+    sublabel: f.path,
+    icon: <FileCode2 className="h-4 w-4" />,
+    onSelect: () => openFile(f.path),
+  }));
+
   return (
     <AppShell>
       <div className="flex h-full flex-col">
@@ -87,6 +152,13 @@ export default function ProjectPage() {
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">{projectId.slice(0, 8)}</span>
           </div>
           <div className="flex shrink-0 gap-2">
+            <button
+              onClick={() => setPaletteMode('files')}
+              title="Quick open (Ctrl+P)"
+              className="flex items-center gap-1.5 rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            >
+              <Search className="h-3.5 w-3.5" /> Quick open
+            </button>
             <Button size="sm" onClick={() => void startAgent()}>
               <Bot className="mr-1.5 h-3.5 w-3.5" /> {sessionId ? 'New session' : 'Start agent'}
             </Button>
@@ -190,6 +262,22 @@ export default function ProjectPage() {
           </div>
         </div>
       </div>
+
+      <Palette
+        open={paletteMode === 'commands'}
+        onClose={() => setPaletteMode(null)}
+        items={commandItems}
+        placeholder="Type a command…"
+        emptyText="No matching commands"
+      />
+      <Palette
+        open={paletteMode === 'files'}
+        onClose={() => setPaletteMode(null)}
+        items={quickItems}
+        placeholder="Type a filename to open…"
+        emptyText="No matching files"
+        loading={quickLoading}
+      />
     </AppShell>
   );
 }

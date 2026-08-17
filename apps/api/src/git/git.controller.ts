@@ -31,6 +31,11 @@ export class GitController {
     return this.git.diff(user.sub, projectId, path, staged === 'true');
   }
 
+  @Get('diff-pair')
+  diffPair(@CurrentUser() user: JwtPayload, @Param('projectId') projectId: string, @Query('path') path: string, @Query('staged') staged?: string) {
+    return this.git.diffPair(user.sub, projectId, path, staged === 'true');
+  }
+
   @Get('log')
   log(@CurrentUser() user: JwtPayload, @Param('projectId') projectId: string, @Query('count') count?: string) {
     return this.git.log(user.sub, projectId, count ? Number.parseInt(count, 10) : 50);
