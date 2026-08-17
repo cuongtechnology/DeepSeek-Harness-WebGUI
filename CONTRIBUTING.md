@@ -34,7 +34,7 @@ Thanks for your interest in contributing to DeepSeek Harness WebGUI.
 
 Implement the `AgentAdapter` interface in `packages/agent-sdk` and register the
 adapter in `apps/api/src/agents/adapters.ts`. Nothing else should change. See
-[docs/agents.md](docs/agents.md).
+[docs/deepseek-harness.md](docs/deepseek-harness.md).
 
 ## Conventions
 

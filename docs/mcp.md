@@ -38,4 +38,4 @@ the harness's `cordis.yml` is a planned integration step.
 The official SDK is dual-published (ESM + CJS) but its `exports` subpaths require
 Node16 module resolution, which the CommonJS NestJS backend does not use. The
 `mcp` package implements the same wire contract directly for the same reason the
-harness adapter does (see docs/agents.md). The protocol is identical.
+harness adapter does (see docs/deepseek-harness.md). The protocol is identical.

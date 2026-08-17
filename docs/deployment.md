@@ -13,7 +13,7 @@ The stack runs `web`, `api`, `worker`, `postgres`, and `redis`.
 
    The binary is produced by the upstream `scripts/build-exe-for-python-sdk.ts`
    or shipped in the `deepseek-harness-runtime-bin` wheel. See
-   [docs/agents.md](agents.md#obtaining-the-runtime).
+   [docs/deepseek-harness.md](deepseek-harness.md#obtaining-the-runtime).
 
 2. Configure environment:
 

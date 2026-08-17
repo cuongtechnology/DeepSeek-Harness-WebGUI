@@ -131,7 +131,7 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
 
     // The SDK wire protocol has no per-turn cancel; stopping a session stops
     // the workspace runtime it lives in (which also stops sibling sessions in
-    // that workspace). This limitation is documented in docs/agents.md.
+    // that workspace). This limitation is documented in docs/deepseek-harness.md.
     const runtime = sr.runtime;
     for (const id of [...runtime.sessions]) {
       const sibling = this.sessions.get(id);
