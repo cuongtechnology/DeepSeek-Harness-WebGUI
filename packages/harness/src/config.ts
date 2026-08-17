@@ -29,6 +29,10 @@ export interface HarnessConfig {
   provider: string;
   model: string;
   maxTokens?: number;
+  /** LLM API key (DEEPSEEK_API_KEY) injected into the runtime env. */
+  apiKey?: string;
+  /** Optional LLM base URL override (DEEPSEEK_BASE_URL). */
+  baseUrl?: string;
   requestTimeoutMs: number;
   disposeGraceMs: number;
   /** Runtime Cordis config path (DSH_CORDIS_CONFIG). */
@@ -67,6 +71,8 @@ export function loadHarnessConfig(env: NodeJS.ProcessEnv = process.env): Harness
     provider: (env.DEEPSEEK_HARNESS_PROVIDER ?? '').trim() || 'deepseek-official',
     model: (env.DEEPSEEK_HARNESS_MODEL ?? '').trim() || 'deepseek-v4-flash',
     maxTokens,
+    apiKey: (env.DEEPSEEK_API_KEY ?? '').trim() || undefined,
+    baseUrl: (env.DEEPSEEK_BASE_URL ?? '').trim() || undefined,
     requestTimeoutMs: parsePositiveInt(env.DEEPSEEK_HARNESS_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     disposeGraceMs: parsePositiveInt(env.DEEPSEEK_HARNESS_KILL_MS, DEFAULT_KILL_MS),
     cordisConfig: (env.DSH_CORDIS_CONFIG ?? '').trim() || undefined,

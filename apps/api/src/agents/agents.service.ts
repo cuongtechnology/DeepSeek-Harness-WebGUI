@@ -6,6 +6,7 @@ import {
   Logger,
   NotFoundException,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { AgentAdapterRegistry } from '@deepseek-harness/agent-sdk';
 import type {
@@ -17,6 +18,7 @@ import { createAdapterRegistry } from './adapters';
 import { PrismaService } from '../common/prisma.service';
 import { AuditService } from '../common/audit.service';
 import { PermissionsService } from '../common/permissions.service';
+import { RuntimeConfigService, type RuntimeConfig, type RuntimeConfigUpdate } from '../common/runtime-config.service';
 import { projectWorkspace } from '../common/workspace';
 import { CreateSessionDto } from './dto/agent.dto';
 import type {
@@ -37,7 +39,7 @@ interface PendingApproval {
 }
 
 @Injectable()
-export class AgentsService implements OnModuleDestroy {
+export class AgentsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger('Agents');
   readonly events = new EventEmitter();
   private readonly registry: AgentAdapterRegistry = createAdapterRegistry();
@@ -47,7 +49,13 @@ export class AgentsService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly permissions: PermissionsService,
+    private readonly runtimeConfig: RuntimeConfigService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    const cfg = await this.runtimeConfig.load().catch(() => null);
+    if (cfg) this.applyRuntimeConfig(cfg);
+  }
 
   async listRuntimes() {
     const adapters = this.registry.list();
@@ -84,6 +92,23 @@ export class AgentsService implements OnModuleDestroy {
       metadata: { method: method ?? null, success: result.success },
     });
     return result;
+  }
+
+  getRuntimeConfig() {
+    return this.runtimeConfig.load().then((cfg) => this.runtimeConfig.toPublic(cfg));
+  }
+
+  async updateRuntimeConfig(ownerId: string, dto: RuntimeConfigUpdate) {
+    const cfg = await this.runtimeConfig.save(dto);
+    this.applyRuntimeConfig(cfg);
+    await this.audit.log({
+      userId: ownerId,
+      action: 'runtime.config_update',
+      resourceType: 'runtime',
+      resourceId: 'deepseek-harness',
+      metadata: { provider: cfg.provider, model: cfg.model, apiKeySet: Boolean(cfg.apiKey), baseUrlSet: Boolean(cfg.baseUrl) },
+    });
+    return this.runtimeConfig.toPublic(cfg);
   }
 
   async startSession(ownerId: string, projectId: string, dto: CreateSessionDto) {
@@ -265,6 +290,21 @@ export class AgentsService implements OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     for (const adapter of this.registry.list()) {
       await adapter.disposeAll?.().catch(() => undefined);
+    }
+  }
+
+  private applyRuntimeConfig(cfg: RuntimeConfig): void {
+    for (const adapter of this.registry.list()) {
+      const a = adapter as unknown as { reconfigure?: (config: Partial<RuntimeConfig>) => void };
+      a.reconfigure?.({
+        provider: cfg.provider,
+        model: cfg.model,
+        maxTokens: cfg.maxTokens,
+        baseUrl: cfg.baseUrl,
+        command: cfg.command,
+        args: cfg.args,
+        apiKey: cfg.apiKey,
+      });
     }
   }
 }

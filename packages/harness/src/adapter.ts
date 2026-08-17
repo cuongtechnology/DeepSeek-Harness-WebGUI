@@ -104,6 +104,17 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
     return result;
   }
 
+  /**
+   * Merge runtime configuration (e.g. provider/model/API key persisted from the
+   * UI) into this adapter. Applies to runtimes created for subsequent sessions;
+   * already-running workspace runtimes keep the config they started with.
+   */
+  reconfigure(config: Partial<HarnessConfig>): void {
+    // Assign verbatim: `undefined` explicitly clears a field (e.g. a removed
+    // API key). The settings service always passes the full effective config.
+    Object.assign(this.config, config);
+  }
+
   async startSession(options: AgentSessionOptions): Promise<AgentSession> {
     if (this.sessions.has(options.sessionId)) {
       throw new Error(`Agent session already running: ${options.sessionId}`);
@@ -241,6 +252,8 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
       DSH_CWD: workspacePath,
       DSH_MODEL: this.config.model,
       ...(this.config.cordisConfig ? { DSH_CORDIS_CONFIG: this.config.cordisConfig } : {}),
+      ...(this.config.apiKey ? { DEEPSEEK_API_KEY: this.config.apiKey } : {}),
+      ...(this.config.baseUrl ? { DEEPSEEK_BASE_URL: this.config.baseUrl } : {}),
     };
   }
 

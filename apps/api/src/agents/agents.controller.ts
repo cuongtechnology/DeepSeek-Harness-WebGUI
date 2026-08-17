@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard, CurrentUser, type JwtPayload } from '../common/jwt-auth.guard';
 import { AgentsService } from './agents.service';
-import { CreateSessionDto, SendMessageDto, ResolveApprovalDto, InstallRuntimeDto } from './dto/agent.dto';
+import { CreateSessionDto, SendMessageDto, ResolveApprovalDto, InstallRuntimeDto, UpdateRuntimeConfigDto } from './dto/agent.dto';
 import type { AgentEvent as AgentEventRecord } from '@deepseek-harness/database';
 
 @ApiTags('agents')
@@ -19,6 +19,16 @@ export class AgentsController {
   @Post('agents/:id/install')
   installRuntime(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: InstallRuntimeDto) {
     return this.agents.installRuntime(user.sub, id, dto.method);
+  }
+
+  @Get('agents/runtime-config')
+  getRuntimeConfig() {
+    return this.agents.getRuntimeConfig();
+  }
+
+  @Put('agents/runtime-config')
+  updateRuntimeConfig(@CurrentUser() user: JwtPayload, @Body() dto: UpdateRuntimeConfigDto) {
+    return this.agents.updateRuntimeConfig(user.sub, dto);
   }
 
   @Post('projects/:projectId/sessions')

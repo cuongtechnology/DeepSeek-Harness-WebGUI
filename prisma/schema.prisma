@@ -271,3 +271,11 @@ model ApprovalRequest {
   @@index([status])
   @@map("approval_requests")
 }
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
