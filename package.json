@@ -9,7 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "dotenv -e .env -- turbo run dev --concurrency=20",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
@@ -17,15 +17,16 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
     "db:generate": "pnpm --filter @deepseek-harness/database db:generate",
-    "db:migrate": "pnpm --filter @deepseek-harness/database db:migrate",
-    "db:push": "pnpm --filter @deepseek-harness/database db:push",
-    "db:deploy": "pnpm --filter @deepseek-harness/database db:deploy",
-    "db:seed": "pnpm --filter @deepseek-harness/database db:seed",
+    "db:migrate": "dotenv -e .env -- pnpm --filter @deepseek-harness/database db:migrate",
+    "db:push": "dotenv -e .env -- pnpm --filter @deepseek-harness/database db:push",
+    "db:deploy": "dotenv -e .env -- pnpm --filter @deepseek-harness/database db:deploy",
+    "db:seed": "dotenv -e .env -- pnpm --filter @deepseek-harness/database db:seed",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
   "devDependencies": {
     "@prisma/client": "^5.22.0",
+    "dotenv-cli": "^11.0.0",
     "prettier": "^3.3.3",
     "prisma": "^5.22.0",
     "turbo": "^2.1.1",
