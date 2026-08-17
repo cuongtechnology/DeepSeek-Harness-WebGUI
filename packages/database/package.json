@@ -1,0 +1,43 @@
+{
+  "name": "@deepseek-harness/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prisma client and schema access for the DeepSeek Harness WebGUI.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "prisma": {
+    "schema": "../../prisma/schema.prisma"
+  },
+  "scripts": {
+    "build": "prisma generate --schema ../../prisma/schema.prisma && tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "prisma generate --schema ../../prisma/schema.prisma && tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "db:generate": "prisma generate --schema ../../prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "db:push": "prisma db push --schema ../../prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema ../../prisma/schema.prisma",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@deepseek-harness/config-eslint": "workspace:*",
+    "@deepseek-harness/config-typescript": "workspace:*",
+    "@deepseek-harness/shared": "workspace:*",
+    "@types/node": "^22.5.0",
+    "eslint": "^8.57.0",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

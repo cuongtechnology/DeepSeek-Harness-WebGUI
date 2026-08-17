@@ -1,0 +1,273 @@
+// DeepSeek Harness WebGUI — Prisma schema
+// Postgres provider. All IDs use Prisma's cuid() generator for consistency.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum AgentSessionStatus {
+  idle
+  starting
+  thinking
+  running
+  waiting_for_approval
+  completed
+  failed
+  stopped
+}
+
+enum TaskStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum GitOperationStatus {
+  pending
+  running
+  success
+  failed
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(user)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projects      Project[]
+  agentSessions AgentSession[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  workspacePath String
+  sourceKind   String   @default("empty") // empty | git | local
+  sourceUrl    String?
+  sourceBranch String?
+  sandboxKind  String   @default("host") // host | docker
+  sandboxImage String?
+  status       String   @default("active")
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  repositories    Repository[]
+  agentSessions   AgentSession[]
+  tasks           Task[]
+  terminalSessions TerminalSession[]
+  gitOperations   GitOperation[]
+  approvalRequests ApprovalRequest[]
+
+  @@index([ownerId])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model Repository {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url       String
+  branch    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("repositories")
+}
+
+model AgentSession {
+  id        String             @id @default(cuid())
+  projectId String
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  adapterId String
+  status    AgentSessionStatus @default(idle)
+  title     String?
+  model     String?
+  startedById String?
+  startedBy   User?           @relation(fields: [startedById], references: [id], onDelete: SetNull)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  endedAt   DateTime?
+
+  messages  Message[]
+  events    AgentEvent[]
+  toolCalls ToolCall[]
+  tasks     Task[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("agent_sessions")
+}
+
+model Message {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String // user | assistant | system
+  content   String
+  createdAt DateTime     @default(now())
+
+  @@index([sessionId, createdAt])
+  @@map("messages")
+}
+
+model AgentEvent {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json
+  createdAt DateTime     @default(now())
+
+  @@index([sessionId, createdAt])
+  @@map("agent_events")
+}
+
+model ToolCall {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tool      String
+  input     Json?
+  output    Json?
+  isError   Boolean      @default(false)
+  status    String       @default("running") // running | success | error
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([sessionId])
+  @@map("tool_calls")
+}
+
+model Task {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sessionId String?
+  session   AgentSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  title     String
+  status    TaskStatus   @default(pending)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  items TaskItem[]
+
+  @@index([projectId])
+  @@index([sessionId])
+  @@map("tasks")
+}
+
+model TaskItem {
+  id          String     @id @default(cuid())
+  taskId      String
+  task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  description String
+  status      TaskStatus @default(pending)
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([taskId])
+  @@map("task_items")
+}
+
+model TerminalSession {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  cwd       String
+  createdAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([projectId])
+  @@map("terminal_sessions")
+}
+
+model McpServer {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  enabled   Boolean  @default(true)
+  transport String   @default("stdio")
+  command   String
+  args      Json     @default("[]")
+  env       Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mcp_servers")
+}
+
+model GitOperation {
+  id        String             @id @default(cuid())
+  projectId String
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  operation String // status | diff | log | checkout | stage | commit | pull | push ...
+  branch    String?
+  status    GitOperationStatus @default(pending)
+  error     String?
+  createdAt DateTime           @default(now())
+
+  @@index([projectId])
+  @@map("git_operations")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action       String
+  resourceType String?
+  resourceId   String?
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model ApprovalRequest {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sessionId String?
+  category  String // shell | filesystem | network | git | package_install
+  action    String
+  status    String    @default("pending") // pending | allowed | denied
+  decision  String? // allow_once | allow_always | deny
+  decidedBy String?
+  decidedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([projectId])
+  @@index([status])
+  @@map("approval_requests")
+}

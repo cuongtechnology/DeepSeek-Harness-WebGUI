@@ -1,0 +1,140 @@
+import simpleGit, { type SimpleGit } from 'simple-git';
+import { GitError } from '@deepseek-harness/shared';
+
+export interface GitStatusFile {
+  path: string;
+  /** Two-char XY status (index + worktree), e.g. "M ", "A ", "??". */
+  status: string;
+  staged: boolean;
+}
+
+export interface GitStatusResult {
+  isRepo: boolean;
+  branch: string | null;
+  files: GitStatusFile[];
+  ahead: number;
+  behind: number;
+}
+
+export interface GitDiffResult {
+  path: string;
+  diff: string;
+}
+
+export interface GitLogEntry {
+  hash: string;
+  author: string;
+  email: string;
+  date: string;
+  message: string;
+}
+
+export interface GitBranchInfo {
+  name: string;
+  current: boolean;
+}
+
+/**
+ * Git operations scoped to one project workspace. Every operation runs via the
+ * system git executable (through simple-git) with the workspace as the base
+ * directory, so it can never touch paths outside the project.
+ */
+export class GitService {
+  private readonly git: SimpleGit;
+
+  constructor(private readonly workspacePath: string) {
+    this.git = simpleGit({ baseDir: workspacePath });
+  }
+
+  async isRepo(): Promise<boolean> {
+    return this.git.checkIsRepo();
+  }
+
+  async status(): Promise<GitStatusResult> {
+    if (!(await this.isRepo())) {
+      return { isRepo: false, branch: null, files: [], ahead: 0, behind: 0 };
+    }
+    const s = await this.git.status();
+    return {
+      isRepo: true,
+      branch: s.current,
+      files: s.files.map((f) => ({
+        path: f.path,
+        status: `${f.index}${f.working_dir}`,
+        staged: f.index !== ' ' && f.index !== '?',
+      })),
+      ahead: s.ahead,
+      behind: s.behind,
+    };
+  }
+
+  async diff(path?: string, staged = false): Promise<GitDiffResult[]> {
+    if (!(await this.isRepo())) return [];
+    const args = staged ? ['--cached'] : [];
+    if (path) args.push('--', path);
+    const raw = await this.git.diff(args);
+    if (!raw) return [];
+    return [{ path: path ?? '', diff: raw }];
+  }
+
+  async show(path: string): Promise<string> {
+    return this.git.show([`HEAD:${path}`]);
+  }
+
+  async log(count = 50): Promise<GitLogEntry[]> {
+    if (!(await this.isRepo())) return [];
+    const log = await this.git.log({ maxCount: count });
+    return log.all.map((e) => ({
+      hash: e.hash,
+      author: e.author_name,
+      email: e.author_email,
+      date: e.date,
+      message: e.message,
+    }));
+  }
+
+  async branches(): Promise<GitBranchInfo[]> {
+    if (!(await this.isRepo())) return [];
+    const b = await this.git.branch();
+    return b.all.map((name) => ({ name, current: name === b.current }));
+  }
+
+  async currentBranch(): Promise<string | null> {
+    if (!(await this.isRepo())) return null;
+    const s = await this.git.status();
+    return s.current;
+  }
+
+  async checkout(branch: string): Promise<void> {
+    await this.wrap(() => this.git.checkout(branch));
+  }
+
+  async stage(paths: string[]): Promise<void> {
+    await this.wrap(() => this.git.add(paths));
+  }
+
+  async unstage(paths: string[]): Promise<void> {
+    await this.wrap(() => this.git.reset(['HEAD', '--', ...paths]));
+  }
+
+  async commit(message: string): Promise<string> {
+    const result = await this.wrap(() => this.git.commit(message));
+    return result.commit;
+  }
+
+  async pull(): Promise<void> {
+    await this.wrap(() => this.git.pull());
+  }
+
+  async push(): Promise<void> {
+    await this.wrap(() => this.git.push());
+  }
+
+  private async wrap<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      throw new GitError(error instanceof Error ? error.message : String(error));
+    }
+  }
+}

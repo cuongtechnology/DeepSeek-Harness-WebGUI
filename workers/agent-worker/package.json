@@ -1,0 +1,25 @@
+{
+  "name": "@deepseek-harness/agent-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BullMQ worker for background agent jobs.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@deepseek-harness/harness": "workspace:*",
+    "@deepseek-harness/shared": "workspace:*",
+    "bullmq": "^5.12.0",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@deepseek-harness/config-eslint": "workspace:*",
+    "@deepseek-harness/config-typescript": "workspace:*",
+    "@types/node": "^22.5.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}

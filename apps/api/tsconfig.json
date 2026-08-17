@@ -1,0 +1,10 @@
+{
+  "extends": "@deepseek-harness/config-typescript/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src"]
+}

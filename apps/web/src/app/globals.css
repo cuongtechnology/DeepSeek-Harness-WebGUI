@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-zinc-950 text-zinc-100 antialiased;
+}
+
+/* Thin scrollbars for a developer-tool feel */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-zinc-700;
+}
+*::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-600;
+}
+*::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+/* xterm.js terminal styling */
+.xterm {
+  height: 100%;
+}

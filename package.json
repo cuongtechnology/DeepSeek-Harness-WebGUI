@@ -1,0 +1,32 @@
+{
+  "name": "deepseek-harness-webgui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A modern, self-hosted WebGUI and control plane for AI coding agents, initially targeting DeepSeek Harness.",
+  "license": "AGPL-3.0",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml,css}\"",
+    "db:generate": "pnpm --filter @deepseek-harness/database db:generate",
+    "db:migrate": "pnpm --filter @deepseek-harness/database db:migrate",
+    "db:seed": "pnpm --filter @deepseek-harness/database db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "turbo": "^2.1.1",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: webgui
+      POSTGRES_PASSWORD: webgui
+      POSTGRES_DB: webgui
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U webgui']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://webgui:webgui@postgres:5432/webgui?schema=public
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      WORKSPACES_ROOT: /data/workspaces
+      # The SDK runtime binary must be mounted below and referenced here.
+      DEEPSEEK_HARNESS_COMMAND: ${DEEPSEEK_HARNESS_COMMAND:-/opt/dsh/dsh-jsonrpc-agent}
+    ports:
+      - '3001:3001'
+    volumes:
+      - workspaces:/data/workspaces
+      # Place the official dsh-jsonrpc-agent binary in ./harness-bin/ and mount it.
+      - ./harness-bin:/opt/dsh:ro
+      # Required by the Docker sandbox manager. See docs/security.md for the
+      # trust implications of exposing the Docker socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      DEEPSEEK_HARNESS_COMMAND: ${DEEPSEEK_HARNESS_COMMAND:-/opt/dsh/dsh-jsonrpc-agent}
+    volumes:
+      - workspaces:/data/workspaces
+      - ./harness-bin:/opt/dsh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: web
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  workspaces:
