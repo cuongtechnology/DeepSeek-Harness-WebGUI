@@ -2,12 +2,15 @@ import type {
   AgentAdapter,
   AgentSession,
   AgentSessionOptions,
+  InstallOptions,
+  InstallResult,
   RuntimeInfo,
 } from '@deepseek-harness/agent-sdk';
 import type { AgentEvent, AgentStatus } from '@deepseek-harness/shared';
 import { createId } from '@deepseek-harness/shared';
 import { loadHarnessConfig, type HarnessConfig } from './config';
 import { isCommandAvailable } from './availability';
+import { installHarness, INSTALL_METHODS } from './installer';
 import {
   SdkRuntimeClient,
   textBlock,
@@ -45,6 +48,10 @@ const now = (): string => new Date().toISOString();
  * the upstream SDK's "one runtime, many sessions" model. Session events
  * (`session.event`), whole-agent status (`session.status`), and subagent
  * lifecycle notifications are normalized into the WebGUI event model.
+ *
+ * When the runtime is missing, `detect()` reports `installable` and `install()`
+ * installs it on demand (pip or source build) — always after the caller has
+ * obtained user consent.
  */
 export class DeepSeekHarnessAdapter implements AgentAdapter {
   readonly id = 'deepseek-harness';
@@ -71,6 +78,8 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
         available: false,
         version: null,
         reason: availability.reason,
+        installable: true,
+        installMethods: INSTALL_METHODS,
       };
     }
     return {
@@ -80,6 +89,19 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
       version: null,
       command: availability.path,
     };
+  }
+
+  async install(options?: InstallOptions): Promise<InstallResult> {
+    const method = (options?.method as HarnessConfig['installMethod'] | undefined) ?? this.config.installMethod;
+    const result = await installHarness(this.config, method);
+    if (result.success && result.command) {
+      // Point subsequent sessions at the freshly installed runtime.
+      this.config.command = result.command;
+      if (result.configPath && !this.config.cordisConfig) {
+        this.config.cordisConfig = result.configPath;
+      }
+    }
+    return result;
   }
 
   async startSession(options: AgentSessionOptions): Promise<AgentSession> {
@@ -218,6 +240,7 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
       ...process.env,
       DSH_CWD: workspacePath,
       DSH_MODEL: this.config.model,
+      ...(this.config.cordisConfig ? { DSH_CORDIS_CONFIG: this.config.cordisConfig } : {}),
     };
   }
 

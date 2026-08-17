@@ -63,9 +63,27 @@ export class AgentsService implements OnModuleDestroy {
           version: info.version,
           command: info.command,
           reason: info.reason,
+          installable: info.installable ?? false,
+          installMethods: info.installMethods ?? [],
         };
       }),
     );
+  }
+
+  async installRuntime(ownerId: string, adapterId: string, method?: string) {
+    const adapter = this.registry.get(adapterId);
+    if (!adapter.install) {
+      throw new BadRequestException(`Runtime "${adapterId}" does not support on-demand installation`);
+    }
+    const result = await adapter.install({ method });
+    await this.audit.log({
+      userId: ownerId,
+      action: 'runtime.install',
+      resourceType: 'runtime',
+      resourceId: adapterId,
+      metadata: { method: method ?? null, success: result.success },
+    });
+    return result;
   }
 
   async startSession(ownerId: string, projectId: string, dto: CreateSessionDto) {

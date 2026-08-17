@@ -63,6 +63,8 @@ DEEPSEEK_HARNESS_MODEL=deepseek-v4-flash
 DEEPSEEK_HARNESS_MAX_TOKENS=
 DEEPSEEK_HARNESS_TIMEOUT_MS=300000
 DEEPSEEK_HARNESS_KILL_MS=3000
+DEEPSEEK_HARNESS_INSTALL_METHOD=pip        # on-demand install: pip | source
+DEEPSEEK_HARNESS_INSTALL_COMMAND=          # optional install-command override
 ```
 
 The runtime reads `DEEPSEEK_API_KEY`, `DEEPSEEK_BASE_URL`, and `DSH_*` variables
@@ -79,6 +81,26 @@ The `dsh-jsonrpc-agent` binary is a single-file Node executable:
 
 The runtime always requires a Cordis configuration (`$DSH_CORDIS_CONFIG` or an
 argv positional); the zero-config path injects the upstream default config.
+
+### On-demand installation
+
+When the runtime is missing, `detect()` reports `installable` and the settings
+UI offers to install it — **only after the user consents**; the WebGUI never
+installs anything silently. Two verified methods are supported:
+
+- `pip` (default) — `python3 -m pip install deepseek-harness-sdk`, which pulls
+  the `deepseek-harness-runtime-bin` platform wheel bundling the single-file
+  executable and the default `cordis.yml`. The installer locates both via the
+  `deepseek_harness_runtime` module and applies them to the running adapter
+  (no restart required).
+- `source` — clone `deepseek-ai/deepseek-harness`, `pnpm install`, then
+  `pnpm exec tsx scripts/build-exe-for-python-sdk.ts` (needs Node >= 22.19 and
+  a build toolchain), producing `dist-exe/dsh-jsonrpc-agent-pkg-<platform>-<arch>`.
+
+`DEEPSEEK_HARNESS_INSTALL_METHOD` sets the default method and
+`DEEPSEEK_HARNESS_INSTALL_COMMAND` overrides the exact command. `npm i -g
+@deepseek-ai/dsh` is intentionally **not** a method: it installs only the `dsh`
+CLI, not the `dsh-jsonrpc-agent` runtime.
 
 ## Session model
 

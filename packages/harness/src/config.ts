@@ -13,9 +13,15 @@
  *   DEEPSEEK_HARNESS_TIMEOUT_MS    per-request timeout (default 5 min)
  *   DEEPSEEK_HARNESS_KILL_MS       grace between SIGTERM -> SIGKILL (default 3000)
  *
+ *   DEEPSEEK_HARNESS_INSTALL_METHOD   on-demand install method: `pip` | `source`
+ *   DEEPSEEK_HARNESS_INSTALL_COMMAND  optional explicit install command override
+ *
  * The runtime reads DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL (LLM credentials) and
- * DSH_* variables from the inherited environment. Secrets are never logged.
+ * DSH_* variables (including DSH_CORDIS_CONFIG) from the inherited environment.
+ * Secrets are never logged.
  */
+
+export type InstallMethod = 'pip' | 'source';
 
 export interface HarnessConfig {
   command: string;
@@ -25,6 +31,12 @@ export interface HarnessConfig {
   maxTokens?: number;
   requestTimeoutMs: number;
   disposeGraceMs: number;
+  /** Runtime Cordis config path (DSH_CORDIS_CONFIG). */
+  cordisConfig?: string;
+  /** On-demand install method, used only when the runtime is missing. */
+  installMethod: InstallMethod;
+  /** Optional explicit install command override (split on whitespace). */
+  installCommand?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
@@ -34,6 +46,11 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function parseInstallMethod(value: string | undefined): InstallMethod {
+  if (value === 'source') return 'source';
+  return 'pip';
 }
 
 export function loadHarnessConfig(env: NodeJS.ProcessEnv = process.env): HarnessConfig {
@@ -52,5 +69,8 @@ export function loadHarnessConfig(env: NodeJS.ProcessEnv = process.env): Harness
     maxTokens,
     requestTimeoutMs: parsePositiveInt(env.DEEPSEEK_HARNESS_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     disposeGraceMs: parsePositiveInt(env.DEEPSEEK_HARNESS_KILL_MS, DEFAULT_KILL_MS),
+    cordisConfig: (env.DSH_CORDIS_CONFIG ?? '').trim() || undefined,
+    installMethod: parseInstallMethod(env.DEEPSEEK_HARNESS_INSTALL_METHOD),
+    installCommand: (env.DEEPSEEK_HARNESS_INSTALL_COMMAND ?? '').trim() || undefined,
   };
 }

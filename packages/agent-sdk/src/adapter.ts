@@ -34,6 +34,29 @@ export interface RuntimeInfo {
   command?: string;
   /** Human-readable reason when unavailable. */
   reason?: string;
+  /** Whether the runtime can be installed on-demand (opt-in, with user consent). */
+  installable?: boolean;
+  /** Supported install methods, e.g. ['pip', 'source']. */
+  installMethods?: string[];
+}
+
+/** Options for an on-demand runtime install. */
+export interface InstallOptions {
+  /** Install method, e.g. 'pip' or 'source'. */
+  method?: string;
+}
+
+/** Result of an on-demand runtime install attempt. */
+export interface InstallResult {
+  success: boolean;
+  /** Resolved runtime executable path after a successful install. */
+  command?: string;
+  /** Resolved default runtime config path (e.g. DSH_CORDIS_CONFIG), when applicable. */
+  configPath?: string;
+  /** Human-readable error when failed. */
+  error?: string;
+  /** Captured command output tail (secrets redacted by the implementation). */
+  output?: string;
 }
 
 /**
@@ -57,6 +80,13 @@ export interface AgentAdapter {
    * without starting a session.
    */
   detect(): Promise<RuntimeInfo>;
+
+  /**
+   * Install the runtime backing this adapter, if it supports on-demand
+   * installation. Implementations MUST be opt-in: the caller is responsible for
+   * obtaining user consent before invoking this (see `RuntimeInfo.installable`).
+   */
+  install?(options?: InstallOptions): Promise<InstallResult>;
 
   startSession(options: AgentSessionOptions): Promise<AgentSession>;
 

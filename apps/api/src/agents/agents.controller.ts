@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard, CurrentUser, type JwtPayload } from '../common/jwt-auth.guard';
 import { AgentsService } from './agents.service';
-import { CreateSessionDto, SendMessageDto, ResolveApprovalDto } from './dto/agent.dto';
+import { CreateSessionDto, SendMessageDto, ResolveApprovalDto, InstallRuntimeDto } from './dto/agent.dto';
 import type { AgentEvent as AgentEventRecord } from '@deepseek-harness/database';
 
 @ApiTags('agents')
@@ -14,6 +14,11 @@ export class AgentsController {
   @Get('agents')
   listRuntimes() {
     return this.agents.listRuntimes();
+  }
+
+  @Post('agents/:id/install')
+  installRuntime(@CurrentUser() user: JwtPayload, @Param('id') id: string, @Body() dto: InstallRuntimeDto) {
+    return this.agents.installRuntime(user.sub, id, dto.method);
   }
 
   @Post('projects/:projectId/sessions')

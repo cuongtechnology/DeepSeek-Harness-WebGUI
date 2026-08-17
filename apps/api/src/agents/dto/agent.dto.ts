@@ -33,3 +33,10 @@ export class ResolveApprovalDto {
   @IsIn(['allow_once', 'allow_always', 'deny'])
   decision!: PermissionDecision;
 }
+
+export class InstallRuntimeDto {
+  @ApiPropertyOptional({ enum: ['pip', 'source'] })
+  @IsOptional()
+  @IsIn(['pip', 'source'])
+  method?: 'pip' | 'source';
+}

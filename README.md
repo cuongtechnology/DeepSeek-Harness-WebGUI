@@ -139,7 +139,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design.
 | PostgreSQL | 16 |
 | Redis | 7 |
 | Docker | optional — for sandboxes and the containerized stack |
-| `dsh-jsonrpc-agent` | the official DeepSeek Harness SDK runtime (see below) |
+| `dsh-jsonrpc-agent` | the official DeepSeek Harness SDK runtime (install on demand from the UI, see below) |
 
 ## Quick Start
 
@@ -203,6 +203,12 @@ All configuration is environment-driven. Key variables:
 | `DEEPSEEK_HARNESS_MAX_TOKENS` | *(empty)* | Optional max tokens |
 | `DEEPSEEK_HARNESS_TIMEOUT_MS` | `300000` | Runtime idle/response timeout |
 | `DEEPSEEK_HARNESS_KILL_MS` | `3000` | Grace window before force-kill |
+| `DEEPSEEK_HARNESS_INSTALL_METHOD` | `pip` | On-demand install method: `pip` \| `source` |
+| `DEEPSEEK_HARNESS_INSTALL_COMMAND` | *(empty)* | Optional install-command override |
+
+When the runtime is missing, **Settings → Agents** offers a one-click install
+(`pip install deepseek-harness-sdk`, or a source build) — always after your
+explicit consent; nothing is ever installed silently.
 
 ### Runtime environment (inherited by the subprocess)
 
