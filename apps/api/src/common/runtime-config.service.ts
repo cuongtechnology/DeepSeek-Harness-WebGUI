@@ -19,6 +19,7 @@ export interface RuntimeConfig {
   baseUrl?: string;
   command: string;
   args: string[];
+  cordisConfig?: string;
   apiKey?: string;
 }
 
@@ -29,6 +30,7 @@ export interface RuntimeConfigPublic {
   baseUrl?: string;
   command: string;
   args: string[];
+  cordisConfig?: string;
   apiKeySet: boolean;
 }
 
@@ -39,6 +41,7 @@ export interface RuntimeConfigUpdate {
   baseUrl?: string;
   command?: string;
   args?: string[];
+  cordisConfig?: string;
   /** undefined = keep current, '' = clear, otherwise set. */
   apiKey?: string;
 }
@@ -81,6 +84,9 @@ export class RuntimeConfigService {
       }
     }
 
+    const cordisConfig = str('cordisConfig');
+    if (cordisConfig) out.cordisConfig = cordisConfig;
+
     const apiKeyRaw = str('apiKey');
     if (apiKeyRaw) {
       try {
@@ -104,6 +110,7 @@ export class RuntimeConfigService {
       baseUrl: overrides.baseUrl ?? env.baseUrl,
       command: overrides.command ?? env.command,
       args: overrides.args ?? env.args,
+      cordisConfig: overrides.cordisConfig ?? env.cordisConfig,
       apiKey: overrides.apiKey ?? env.apiKey,
     };
   }
@@ -121,6 +128,7 @@ export class RuntimeConfigService {
     if (dto.baseUrl !== undefined) await upsert('baseUrl', dto.baseUrl.trim());
     if (dto.command !== undefined) await upsert('command', dto.command.trim());
     if (dto.args !== undefined) await upsert('args', JSON.stringify(dto.args));
+    if (dto.cordisConfig !== undefined) await upsert('cordisConfig', dto.cordisConfig.trim());
     if (dto.maxTokens !== undefined) await upsert('maxTokens', dto.maxTokens === null ? '' : String(dto.maxTokens));
     if (dto.apiKey !== undefined) {
       await upsert('apiKey', dto.apiKey === '' ? '' : encryptSecret(dto.apiKey, effectiveSecret()));
@@ -137,6 +145,7 @@ export class RuntimeConfigService {
       baseUrl: config.baseUrl,
       command: config.command,
       args: config.args,
+      cordisConfig: config.cordisConfig,
       apiKeySet: Boolean(config.apiKey),
     };
   }

@@ -307,6 +307,7 @@ export class AgentsService implements OnModuleInit, OnModuleDestroy {
         baseUrl: cfg.baseUrl,
         command: cfg.command,
         args: cfg.args,
+        cordisConfig: cfg.cordisConfig,
         apiKey: cfg.apiKey,
       });
     }

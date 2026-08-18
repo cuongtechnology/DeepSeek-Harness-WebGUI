@@ -35,6 +35,7 @@ interface RuntimeConfig {
   baseUrl?: string;
   command: string;
   args: string[];
+  cordisConfig?: string;
   apiKeySet: boolean;
 }
 
@@ -45,10 +46,11 @@ interface FormState {
   baseUrl: string;
   command: string;
   args: string;
+  cordisConfig: string;
   apiKey: string;
 }
 
-const EMPTY_FORM: FormState = { provider: '', model: '', maxTokens: '', baseUrl: '', command: '', args: '', apiKey: '' };
+const EMPTY_FORM: FormState = { provider: '', model: '', maxTokens: '', baseUrl: '', command: '', args: '', cordisConfig: '', apiKey: '' };
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -92,6 +94,7 @@ export default function AgentsSettingsPage() {
           baseUrl: c.baseUrl ?? '',
           command: c.command,
           args: c.args.join(' '),
+          cordisConfig: c.cordisConfig ?? '',
           apiKey: '',
         });
       })
@@ -130,6 +133,7 @@ export default function AgentsSettingsPage() {
         baseUrl: form.baseUrl.trim(),
         command: form.command.trim(),
         args: form.args.trim() ? form.args.trim().split(/\s+/) : [],
+        cordisConfig: form.cordisConfig.trim(),
       };
       if (clearKey) body.apiKey = '';
       else if (form.apiKey.trim()) body.apiKey = form.apiKey.trim();
@@ -261,6 +265,12 @@ export default function AgentsSettingsPage() {
                 </Field>
                 <Field label="Runtime arguments" hint="Extra args, split on whitespace.">
                   <input className={inputCls} value={form.args} onChange={set('args')} placeholder="--flag value" />
+                </Field>
+                <Field
+                  label="Cordis config path"
+                  hint="Optional cordis.yml composition (DSH_CORDIS_CONFIG). Leave empty for the runtime default."
+                >
+                  <input className={inputCls} value={form.cordisConfig} onChange={set('cordisConfig')} placeholder="/path/to/cordis.yml" />
                 </Field>
 
                 <div className="sm:col-span-2">

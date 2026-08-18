@@ -77,6 +77,12 @@ export class UpdateRuntimeConfigDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
+  cordisConfig?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   @MaxLength(1000)
   apiKey?: string;
 }
