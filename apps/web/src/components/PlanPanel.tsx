@@ -11,9 +11,19 @@ function StatusIcon({ status }: { status: string }) {
 }
 
 /** Left-hand plan + task sidebar for the session detail page. */
-export function PlanPanel({ plan, tasks }: { plan: PlanDisplayItem[]; tasks: TaskDisplayItem[] }) {
+export function PlanPanel({ plan, tasks, planMode }: { plan: PlanDisplayItem[]; tasks: TaskDisplayItem[]; planMode?: boolean | null }) {
   return (
     <div className="space-y-6">
+      {planMode !== undefined && planMode !== null && (
+        <div
+          className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs ${
+            planMode ? 'border-amber-600/40 bg-amber-950/30 text-amber-300' : 'border-zinc-800 bg-zinc-900/50 text-zinc-500'
+          }`}
+        >
+          <ListChecks className="h-3.5 w-3.5 shrink-0" />
+          {planMode ? 'Plan mode is ON' : 'Plan mode is OFF'}
+        </div>
+      )}
       <section>
         <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
           <ClipboardList className="h-3.5 w-3.5" /> Plan

@@ -15,7 +15,16 @@ import {
   Bot,
   User,
   Loader2,
+  Layers,
+  Gauge,
 } from 'lucide-react';
+
+/** Compact token formatting: 1234 -> "1.2k", 98765 -> "98.8k". */
+function formatTokens(n: number | undefined): string {
+  if (n === undefined || Number.isNaN(n)) return '';
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(n);
+}
 
 export interface TranscriptController {
   events: AgentEvent[];
@@ -106,6 +115,11 @@ export function Transcript({
                   <div className="max-w-[90%] rounded-lg rounded-bl-sm border border-zinc-800 bg-zinc-900/60 px-3 py-2">
                     <span className="mb-0.5 flex items-center gap-1 text-[10px] uppercase tracking-wide text-zinc-500">
                       <Bot className="h-3 w-3" /> Assistant
+                      {item.usage && (item.usage.input !== undefined || item.usage.output !== undefined) && (
+                        <span className="ml-1 rounded bg-zinc-800 px-1 py-px font-mono normal-case tracking-normal text-zinc-400" title="Token usage reported by the runtime">
+                          in {formatTokens(item.usage.input)} · out {formatTokens(item.usage.output)}
+                        </span>
+                      )}
                     </span>
                     <pre className="whitespace-pre-wrap font-sans text-zinc-200">{item.content}</pre>
                   </div>
@@ -177,6 +191,72 @@ export function Transcript({
                 <div key={item.id} className="flex items-center gap-1.5 text-xs text-zinc-500">
                   <GitBranch className="h-3.5 w-3.5 shrink-0" />
                   {item.text}
+                </div>
+              );
+
+            case 'plan_mode':
+              return item.active ? (
+                <div key={item.id} className="flex items-center gap-1.5 rounded-md border border-amber-600/40 bg-amber-950/30 px-2.5 py-1 text-xs text-amber-300">
+                  <ListChecks className="h-3.5 w-3.5 shrink-0" /> Plan mode ON — agent plans before acting
+                </div>
+              ) : (
+                <div key={item.id} className="flex items-center gap-1.5 rounded-md bg-zinc-900/60 px-2.5 py-1 text-xs text-zinc-500">
+                  <ListChecks className="h-3.5 w-3.5 shrink-0" /> Plan mode OFF
+                </div>
+              );
+
+            case 'turn':
+              return item.phase === 'start' ? (
+                <div key={item.id} className="flex items-center gap-2 py-0.5">
+                  <div className="h-px flex-1 bg-zinc-800" />
+                  <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-zinc-600">
+                    <Layers className="h-3 w-3" /> Turn {item.index}
+                  </span>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+              ) : (
+                <div key={item.id} className="flex items-center justify-center gap-1.5 pb-0.5 text-[10px] text-zinc-600">
+                  <span>Turn {item.index} ended</span>
+                  {item.reason && <span className="rounded bg-zinc-800/80 px-1 py-px text-zinc-500">{item.reason}</span>}
+                </div>
+              );
+
+            case 'step':
+              return item.phase === 'start' ? (
+                <div key={item.id} className="flex items-center gap-1.5 pl-2 text-[10px] text-zinc-600">
+                  <span className="h-3 w-px bg-zinc-700" />
+                  <span className="font-mono">
+                    step {item.turn}.{item.index}
+                  </span>
+                </div>
+              ) : null;
+
+            case 'request_header':
+              return item.model || item.reason ? (
+                <div key={item.id} className="flex items-center justify-end gap-1.5 text-[10px] text-zinc-600">
+                  <span className="rounded bg-zinc-900/80 px-1.5 py-px font-mono">
+                    {item.model ?? 'model'}
+                    {item.reason ? ` · ${item.reason}` : ''}
+                  </span>
+                </div>
+              ) : null;
+
+            case 'compaction':
+              return (
+                <div key={item.id} className="rounded-md border border-sky-800/50 bg-sky-950/20 p-2 text-xs text-sky-300">
+                  <div className="flex items-center gap-1.5">
+                    <Gauge className="h-3.5 w-3.5 shrink-0" />
+                    {item.phase === 'start' && <span>Compacting context…</span>}
+                    {item.phase === 'end' && <span>Context compacted</span>}
+                    {item.phase === 'summary' && <span>Context compaction summary</span>}
+                    {item.phase === 'prune' && <span>Context pruned</span>}
+                    {item.shadowedTokenCount !== undefined && (
+                      <span className="ml-auto rounded bg-sky-900/60 px-1 py-px font-mono text-[10px]">
+                        {formatTokens(item.shadowedTokenCount)} tokens shadowed
+                      </span>
+                    )}
+                  </div>
+                  {item.summary && <pre className="mt-1.5 max-h-32 overflow-auto whitespace-pre-wrap font-sans text-sky-200/80">{item.summary}</pre>}
                 </div>
               );
 

@@ -28,6 +28,12 @@ export type AgentEventType =
   | 'plan'
   | 'task_update'
   | 'subagent'
+  | 'plan_mode'
+  | 'turn'
+  | 'step'
+  | 'request_header'
+  | 'compaction'
+  | 'session_title'
   | 'error'
   | 'session_ended';
 
@@ -69,6 +75,15 @@ export interface MessageEvent extends BaseEvent {
   id: string;
   role: 'assistant' | 'user' | 'system';
   content: string;
+  /** Token usage reported by the runtime for an assistant message. */
+  usage?: TokenUsage;
+}
+
+/** Token counts as reported on `assistant/message` (`usage` in the wire event). */
+export interface TokenUsage {
+  input?: number;
+  output?: number;
+  total?: number;
 }
 
 export interface MessageDeltaEvent extends BaseEvent {
@@ -142,6 +157,54 @@ export interface SubagentEvent extends BaseEvent {
   status?: 'ok' | 'error';
 }
 
+/** Plan-mode state as logged by the runtime (`plan/mode` wire event). */
+export interface PlanModeEvent extends BaseEvent {
+  type: 'plan_mode';
+  active: boolean;
+  details?: unknown;
+}
+
+/** Turn boundary (`turn/start` / `turn/end` wire events). */
+export interface TurnEvent extends BaseEvent {
+  type: 'turn';
+  phase: 'start' | 'end';
+  index: number;
+  /** `kind` from the wire `TurnEndReason` (completed/aborted/blocked/error/max-tokens/interrupted). */
+  reason?: string;
+}
+
+/** Step boundary (`step/start` / `step/end` wire events). */
+export interface StepEvent extends BaseEvent {
+  type: 'step';
+  phase: 'start' | 'end';
+  turn: number;
+  index: number;
+}
+
+/** Model request metadata (`request/header` wire event). */
+export interface RequestHeaderEvent extends BaseEvent {
+  type: 'request_header';
+  model?: string;
+  reason?: string;
+  details?: unknown;
+}
+
+/** Context compaction lifecycle (`compaction/*` wire events). */
+export interface CompactionEvent extends BaseEvent {
+  type: 'compaction';
+  phase: 'start' | 'end' | 'summary' | 'prune';
+  summary?: string;
+  shadowedTokenCount?: number;
+  details?: unknown;
+}
+
+/** Auto-generated session title (`session/title` wire event). */
+export interface SessionTitleEvent extends BaseEvent {
+  type: 'session_title';
+  title: string;
+  source?: string;
+}
+
 export interface ErrorEvent extends BaseEvent {
   type: 'error';
   message: string;
@@ -167,6 +230,12 @@ export type AgentEvent =
   | PlanEvent
   | TaskUpdateEvent
   | SubagentEvent
+  | PlanModeEvent
+  | TurnEvent
+  | StepEvent
+  | RequestHeaderEvent
+  | CompactionEvent
+  | SessionTitleEvent
   | ErrorEvent
   | SessionEndedEvent;
 

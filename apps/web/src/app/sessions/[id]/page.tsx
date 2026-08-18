@@ -9,7 +9,7 @@ import { PlanPanel } from '@/components/PlanPanel';
 import { useAgentSession } from '@/lib/useAgentSession';
 import { apiGet } from '@/lib/api';
 import { Badge, Button } from '@deepseek-harness/ui';
-import { extractPlan, extractTasks } from '@/lib/transcript';
+import { extractPlan, extractPlanMode, extractTasks } from '@/lib/transcript';
 import { ChevronLeft, ExternalLink } from 'lucide-react';
 import type { AgentStatus } from '@deepseek-harness/shared';
 
@@ -38,6 +38,7 @@ export default function SessionPage() {
 
   const plan = extractPlan(socket.events);
   const tasks = extractTasks(socket.events);
+  const planMode = extractPlanMode(socket.events);
   const ended = session ? TERMINAL.includes(session.status) : false;
 
   return (
@@ -79,7 +80,7 @@ export default function SessionPage() {
 
         <div className="flex min-h-0 flex-1">
           <aside className="w-64 shrink-0 overflow-y-auto border-r border-zinc-800 p-3">
-            <PlanPanel plan={plan} tasks={tasks} />
+            <PlanPanel plan={plan} tasks={tasks} planMode={planMode} />
           </aside>
           <main className="min-w-0 flex-1">
             <Transcript

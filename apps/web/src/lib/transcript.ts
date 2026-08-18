@@ -7,12 +7,17 @@ import type { AgentEvent, AgentStatus } from '@deepseek-harness/shared';
  */
 
 export type TranscriptItem =
-  | { kind: 'message'; id: string; role: string; content: string }
+  | { kind: 'message'; id: string; role: string; content: string; usage?: { input?: number; output?: number; total?: number } }
   | { kind: 'tool'; id: string; tool: string; input: unknown; output?: unknown; isError?: boolean }
   | { kind: 'command'; id: string; command: string }
   | { kind: 'file'; id: string; path: string; change: string }
   | { kind: 'task'; id: string; title: string; status: string }
   | { kind: 'subagent'; id: string; text: string }
+  | { kind: 'plan_mode'; id: string; active: boolean }
+  | { kind: 'turn'; id: string; phase: 'start' | 'end'; index: number; reason?: string }
+  | { kind: 'step'; id: string; phase: 'start' | 'end'; turn: number; index: number }
+  | { kind: 'request_header'; id: string; model?: string; reason?: string }
+  | { kind: 'compaction'; id: string; phase: string; summary?: string; shadowedTokenCount?: number }
   | { kind: 'error'; id: string; message: string };
 
 export interface PlanDisplayItem {
@@ -54,7 +59,7 @@ export function buildTranscript(events: AgentEvent[]): { items: TranscriptItem[]
     switch (e.type) {
       case 'message':
         if (e.role === 'assistant') streaming = '';
-        items.push({ kind: 'message', id: e.id, role: e.role, content: e.content });
+        items.push({ kind: 'message', id: e.id, role: e.role, content: e.content, ...(e.usage === undefined ? {} : { usage: e.usage }) });
         break;
       case 'message_delta':
         streaming += e.content;
@@ -92,6 +97,32 @@ export function buildTranscript(events: AgentEvent[]): { items: TranscriptItem[]
               : `Subagent finished (${e.childSessionId.slice(0, 8)}…)${e.status ? ` · ${e.status}` : ''}`,
         });
         break;
+      case 'plan_mode':
+        items.push({ kind: 'plan_mode', id: `plan-mode:${e.timestamp}`, active: e.active });
+        break;
+      case 'turn':
+        items.push({ kind: 'turn', id: `turn:${e.index}:${e.phase}`, phase: e.phase, index: e.index, ...(e.reason === undefined ? {} : { reason: e.reason }) });
+        break;
+      case 'step':
+        items.push({ kind: 'step', id: `step:${e.turn}:${e.index}:${e.phase}`, phase: e.phase, turn: e.turn, index: e.index });
+        break;
+      case 'request_header':
+        items.push({
+          kind: 'request_header',
+          id: `req:${e.timestamp}`,
+          ...(e.model === undefined ? {} : { model: e.model }),
+          ...(e.reason === undefined ? {} : { reason: e.reason }),
+        });
+        break;
+      case 'compaction':
+        items.push({
+          kind: 'compaction',
+          id: `compaction:${e.timestamp}`,
+          phase: e.phase,
+          ...(e.summary === undefined ? {} : { summary: e.summary }),
+          ...(e.shadowedTokenCount === undefined ? {} : { shadowedTokenCount: e.shadowedTokenCount }),
+        });
+        break;
       case 'error':
         items.push({ kind: 'error', id: e.message, message: e.message });
         break;
@@ -121,4 +152,16 @@ export function extractTasks(events: AgentEvent[]): TaskDisplayItem[] {
     }
   }
   return [...map.values()];
+}
+
+/**
+ * Latest plan-mode state, or `null` when the runtime never reported one.
+ * Tracks the `plan/mode` wire event (logged state), distinct from todo tasks.
+ */
+export function extractPlanMode(events: AgentEvent[]): boolean | null {
+  let mode: boolean | null = null;
+  for (const e of events) {
+    if (e.type === 'plan_mode') mode = e.active;
+  }
+  return mode;
 }

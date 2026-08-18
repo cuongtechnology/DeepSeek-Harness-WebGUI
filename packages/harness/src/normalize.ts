@@ -85,15 +85,22 @@ export function normalizeSessionEvent(event: unknown, _sessionId: string): Agent
       const message = isRecord(data.message) ? data.message : {};
       const text = contentBlocksToText(message.content);
       const id = typeof message.id === 'string' && message.id ? message.id : stepMessageId(ev, createShortId('msg'));
-      return [
-        {
-          type: 'message',
-          id,
-          role: 'assistant',
-          content: text,
-          timestamp: now(),
-        },
-      ];
+      const event: Extract<AgentEvent, { type: 'message' }> = {
+        type: 'message',
+        id,
+        role: 'assistant',
+        content: text,
+        timestamp: now(),
+      };
+      // The wire event carries optional `usage` (TokenUsage) on the data payload.
+      if (isRecord(data.usage)) {
+        const usage: { input?: number; output?: number; total?: number } = {};
+        for (const key of ['input', 'output', 'total'] as const) {
+          if (typeof data.usage[key] === 'number') usage[key] = data.usage[key];
+        }
+        if (Object.keys(usage).length > 0) event.usage = usage;
+      }
+      return [event];
     }
 
     case 'user/message': {
@@ -191,20 +198,77 @@ export function normalizeSessionEvent(event: unknown, _sessionId: string): Agent
       ];
     }
 
-    case 'subagent/descriptor':
     case 'turn/start':
-    case 'turn/end':
+    case 'turn/end': {
+      const index = typeof data.turn === 'number' ? data.turn : 0;
+      if (ev.type === 'turn/start') {
+        return [{ type: 'turn', phase: 'start', index, timestamp: now() }];
+      }
+      const reason = isRecord(data.reason) && typeof data.reason.kind === 'string' ? data.reason.kind : undefined;
+      return [{ type: 'turn', phase: 'end', index, ...(reason === undefined ? {} : { reason }), timestamp: now() }];
+    }
+
     case 'step/start':
-    case 'step/end':
-    case 'request/header':
-    case 'request/context':
-    case 'session/end-seed':
-    case 'plan/mode':
-    case 'session/title':
+    case 'step/end': {
+      const turn = typeof data.turn === 'number' ? data.turn : 0;
+      const index = typeof data.step === 'number' ? data.step : 0;
+      return [{ type: 'step', phase: ev.type === 'step/start' ? 'start' : 'end', turn, index, timestamp: now() }];
+    }
+
+    case 'plan/mode': {
+      return [{ type: 'plan_mode', active: data.active === true, details: data, timestamp: now() }];
+    }
+
     case 'compaction/start':
     case 'compaction/end':
     case 'compaction/summary':
-    case 'compaction/prune':
+    case 'compaction/prune': {
+      const phase = ev.type.slice('compaction/'.length) as 'start' | 'end' | 'summary' | 'prune';
+      let summary: string | undefined;
+      let shadowedTokenCount: number | undefined;
+      if (phase === 'summary') {
+        // `summary` is an array of message parts; render as best-effort text.
+        summary = contentBlocksToText(data.summary) || (typeof data.summary === 'string' ? data.summary : undefined);
+        if (typeof data.shadowedTokenCount === 'number') shadowedTokenCount = data.shadowedTokenCount;
+      }
+      return [
+        {
+          type: 'compaction',
+          phase,
+          ...(summary === undefined ? {} : { summary }),
+          ...(shadowedTokenCount === undefined ? {} : { shadowedTokenCount }),
+          details: data,
+          timestamp: now(),
+        },
+      ];
+    }
+
+    case 'request/header': {
+      const header = isRecord(data.header) ? data.header : {};
+      const config = isRecord(header.config) ? header.config : {};
+      const model = typeof config.model === 'string' ? config.model : undefined;
+      const reason = isRecord(data.reason) && typeof data.reason.kind === 'string' ? data.reason.kind : undefined;
+      return [
+        {
+          type: 'request_header',
+          ...(model === undefined ? {} : { model }),
+          ...(reason === undefined ? {} : { reason }),
+          details: data,
+          timestamp: now(),
+        },
+      ];
+    }
+
+    case 'session/title': {
+      const title = typeof data.title === 'string' ? data.title : '';
+      if (!title) return [];
+      const source = isRecord(data.source) && typeof data.source.kind === 'string' ? data.source.kind : undefined;
+      return [{ type: 'session_title', title, ...(source === undefined ? {} : { source }), timestamp: now() }];
+    }
+
+    case 'request/context':
+    case 'session/end-seed':
+    case 'subagent/descriptor':
       // Structural or log-only events: no user-facing mapping.
       return [];
 
