@@ -121,6 +121,18 @@ session goes `running` → `idle` around each turn; it is long-lived and does no
 - The SDK runtime composition ships without an approval UI, so harness-internal
   approvals are not surfaced; the WebGUI's approval gate covers its own command
   execution, and the `approval_request` event path is ready for future runtimes.
+- **No reverse control channel.** The wire protocol defines exactly three
+  requests — `initialize`, `session/prompt`, `shutdown` (verified against
+  `@deepseek-ai/dsh-sdk-protocol` and the runtime server's `handleRequest`).
+  There is no approval-response, ask-user-answer, or interrupt request, so:
+  - `approval/asked` cards in the UI are **observed state only** — the runtime
+    resolves approvals through its own composition (e.g. a `danger-full-access`
+    preset never asks), and the adapter declares
+    `supportsApprovalResponses = false` so the UI hides the allow/deny buttons;
+  - `ask_user_question` cannot be answered from the WebGUI (no user-questions
+    wire channel);
+  - the only interrupt is `stopSession`, which shuts down the workspace runtime
+    (stopping sibling sessions in that workspace).
 
 ## Adding a new runtime
 

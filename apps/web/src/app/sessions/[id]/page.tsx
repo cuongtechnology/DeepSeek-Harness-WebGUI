@@ -22,6 +22,7 @@ interface SessionDetail {
   model: string | null;
   createdAt: string;
   endedAt: string | null;
+  approvalResponsesSupported: boolean;
   project: { id: string; name: string };
 }
 
@@ -91,6 +92,7 @@ export default function SessionPage() {
               respondApproval={socket.respondApproval}
               showHeader={false}
               readOnly={ended}
+              approvalResponsesSupported={session?.approvalResponsesSupported ?? false}
             />
           </main>
         </div>

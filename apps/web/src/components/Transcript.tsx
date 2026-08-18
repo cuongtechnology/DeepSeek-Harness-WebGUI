@@ -48,7 +48,13 @@ export function Transcript({
   respondApproval,
   showHeader = true,
   readOnly = false,
-}: TranscriptController & { showHeader?: boolean; readOnly?: boolean }) {
+  approvalResponsesSupported = false,
+}: TranscriptController & {
+  showHeader?: boolean;
+  readOnly?: boolean;
+  /** When false (default), approval cards show observed state without allow/deny buttons. */
+  approvalResponsesSupported?: boolean;
+}) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const status = statusFromEvents(events);
@@ -296,17 +302,24 @@ export function Transcript({
               <ShieldAlert className="h-3.5 w-3.5" /> Approval required · {a.category}
             </div>
             <pre className="mb-2 whitespace-pre-wrap rounded bg-zinc-950/60 p-2 font-mono text-xs text-zinc-200">{a.action}</pre>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="success" onClick={() => respondApproval(a.id, 'allow_once' as PermissionDecision)}>
-                Allow once
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => respondApproval(a.id, 'allow_always' as PermissionDecision)}>
-                Allow always
-              </Button>
-              <Button size="sm" variant="destructive" onClick={() => respondApproval(a.id, 'deny' as PermissionDecision)}>
-                Deny
-              </Button>
-            </div>
+            {approvalResponsesSupported ? (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="success" onClick={() => respondApproval(a.id, 'allow_once' as PermissionDecision)}>
+                  Allow once
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => respondApproval(a.id, 'allow_always' as PermissionDecision)}>
+                  Allow always
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => respondApproval(a.id, 'deny' as PermissionDecision)}>
+                  Deny
+                </Button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-amber-200/60">
+                This runtime resolves approvals itself — the SDK wire protocol has no approval-response channel, so this
+                card shows observed state only.
+              </p>
+            )}
           </div>
         ))}
       </div>

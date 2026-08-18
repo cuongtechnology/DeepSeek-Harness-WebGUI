@@ -13,10 +13,12 @@ export function AgentPanel({
   sessionId,
   replay = false,
   showHeader = true,
+  approvalResponsesSupported = false,
 }: {
   sessionId: string;
   replay?: boolean;
   showHeader?: boolean;
+  approvalResponsesSupported?: boolean;
 }) {
   const socket = useAgentSession(sessionId, { replay });
   return (
@@ -27,6 +29,7 @@ export function AgentPanel({
       stop={socket.stop}
       respondApproval={socket.respondApproval}
       showHeader={showHeader}
+      approvalResponsesSupported={approvalResponsesSupported}
     />
   );
 }

@@ -66,6 +66,7 @@ export class AgentsService implements OnModuleInit, OnModuleDestroy {
           name: adapter.name,
           description: adapter.description,
           capabilities: adapter.capabilities ?? [],
+          supportsApprovalResponses: adapter.supportsApprovalResponses ?? false,
           available: info.available,
           version: info.version,
           command: info.command,
@@ -176,13 +177,14 @@ export class AgentsService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async getSession(ownerId: string, sessionId: string): Promise<SessionWithProject> {
+  async getSession(ownerId: string, sessionId: string): Promise<SessionWithProject & { approvalResponsesSupported: boolean }> {
     const session = await this.prisma.agentSession.findFirst({
       where: { id: sessionId, project: { ownerId } },
       include: { project: { select: { id: true, name: true } } },
     });
     if (!session) throw new NotFoundException('Session not found');
-    return session;
+    const adapter = this.registry.get(session.adapterId);
+    return { ...session, approvalResponsesSupported: adapter.supportsApprovalResponses ?? false };
   }
 
   async getMessages(ownerId: string, sessionId: string): Promise<MessageRecord[]> {

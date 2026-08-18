@@ -67,6 +67,11 @@ afterEach(async () => {
 });
 
 describe('DeepSeekHarnessAdapter', () => {
+  it('declares that approval responses are not supported (no wire channel)', () => {
+    const adapter = makeAdapter();
+    expect(adapter.supportsApprovalResponses).toBe(false);
+  });
+
   it('detect() reports an unavailable binary', async () => {
     const adapter = new DeepSeekHarnessAdapter({ command: '/definitely/not/a/real/runtime' });
     const info = await adapter.detect();

@@ -59,6 +59,15 @@ export class DeepSeekHarnessAdapter implements AgentAdapter {
     'Runs the official DeepSeek Harness (dsh) coding agent via its JSON-RPC SDK runtime. ' +
     'The runtime executable is configured with DEEPSEEK_HARNESS_COMMAND.';
   readonly capabilities = ['shell', 'filesystem', 'git', 'network', 'subagents'];
+  /**
+   * The SDK wire protocol defines only `initialize`, `session/prompt` and
+   * `shutdown` requests (verified against `@deepseek-ai/dsh-sdk-protocol`
+   * and the runtime server's `handleRequest`). There is no approval-response
+   * request, so human decisions made in the WebGUI cannot reach the runtime:
+   * `approval/asked` events are observed state only. The UI must not offer
+   * allow/deny buttons for this adapter.
+   */
+  readonly supportsApprovalResponses = false;
 
   private readonly config: HarnessConfig;
   private readonly runtimes = new Map<string, RuntimeHandle>();

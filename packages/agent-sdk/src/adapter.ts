@@ -74,6 +74,14 @@ export interface AgentAdapter {
   readonly description?: string;
   /** Optional list of capability hints shown in the UI. */
   readonly capabilities?: string[];
+  /**
+   * Whether human approval decisions (allow/deny) made in the UI can be
+   * delivered back to the runtime. Defaults to false. Adapters that only
+   * observe `approval_request` events but have no reverse channel (e.g. a
+   * wire protocol without an approval-response request) must leave this
+   * unset so the UI does not offer buttons that cannot take effect.
+   */
+  readonly supportsApprovalResponses?: boolean;
 
   /**
    * Detect whether the runtime backing this adapter is installed and usable,
